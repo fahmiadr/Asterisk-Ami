@@ -468,8 +468,6 @@ async function updateAgentsHangup(event) {
   }
 }
 
-
-
 // Helper
 function detectHangupBy(event) {
   if (!event) return 'system';
@@ -486,6 +484,136 @@ function detectDirection(channel) {
   return 'internal';
 }
 
+/*
+; Report
+*/
+
+function extractCommon(event) {
+  return {
+    callId: event.linkedid || event.uniqueid,
+    uniqueid: event.uniqueid,
+    queueName: event.queuename || null,
+    agentId:
+      event.membername ||
+      event.connectedlinenum ||
+      (event.channel?.match(/(?:PJSIP|SIP)\/(\d+)/)?.[1]) ||
+      null,
+    eventTime: event.eventtime
+      ? new Date(event.eventtime * 1000)
+      : new Date()
+  };
+}
+
+async function insertQueueEvent({
+  eventTime,
+  callId,
+  uniqueid,
+  queueName,
+  agentId,
+  eventName,
+  waitTime = null,
+  talkTime = null,
+  rawEvent
+}) {
+  try {
+    await pool.query(
+      `
+      INSERT INTO cc_queue_event
+      (
+        event_time,
+        call_id,
+        uniqueid,
+        queue_name,
+        agent_id,
+        event,
+        wait_time,
+        talk_time,
+        raw_event
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      `,
+      [
+        eventTime,
+        callId,
+        uniqueid,
+        queueName,
+        agentId,
+        eventName,
+        waitTime,
+        talkTime,
+        rawEvent
+      ]
+    );
+  } catch (err) {
+    logger(`❌ DB Error (insertQueueEvent): ${err.message}`);
+  }
+}
+
+async function onQueueCallerJoin(event) {
+  const c = extractCommon(event);
+
+  await insertQueueEvent({
+    ...c,
+    eventName: 'ENTERQUEUE',
+    rawEvent: event
+  });
+}
+
+async function onAgentRingNoAnswer(event) {
+  const c = extractCommon(event);
+
+  await insertQueueEvent({
+    ...c,
+    eventName: 'RINGNOANSWER',
+    rawEvent: event
+  });
+}
+
+async function onBridgeEnter(event) {
+  const c = extractCommon(event);
+
+  await insertQueueEvent({
+    ...c,
+    eventName: 'CONNECT',
+    waitTime: event.holdtime ? parseInt(event.holdtime) : null,
+    rawEvent: event
+  });
+}
+
+async function onQueueCallerAbandon(event) {
+  const c = extractCommon(event);
+
+  await insertQueueEvent({
+    ...c,
+    eventName: 'ABANDON',
+    waitTime: event.waittime ? parseInt(event.waittime) : null,
+    rawEvent: event
+  });
+}
+
+async function onQueueCallerLeave(event) {
+  const c = extractCommon(event);
+
+  await insertQueueEvent({
+    ...c,
+    eventName: 'LEAVE',
+    rawEvent: event
+  });
+}
+
+async function onHangup(event) {
+  const c = extractCommon(event);
+
+  await insertQueueEvent({
+    ...c,
+    eventName: 'HANGUP',
+    talkTime: event.talktime ? parseInt(event.talktime) : null,
+    rawEvent: event
+  });
+
+  // existing logic
+  // await updateAgentsHangup(event);
+}
 
 module.exports={
     /*saveEmail,
@@ -505,5 +633,11 @@ module.exports={
     updateAgentAbandon,
     updateAgentsConnected,
     updateAgentsRinging,
-    updateAgentsHangup
+    updateAgentsHangup,
+    onAgentRingNoAnswer,
+    onBridgeEnter,
+    onHangup,
+    onQueueCallerAbandon,
+    onQueueCallerJoin,
+    onQueueCallerLeave
 }
