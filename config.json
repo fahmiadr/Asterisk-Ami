@@ -1,0 +1,27 @@
+{
+    "Log" : {
+        "Filename": "Log//AMI.log",
+        "Level": "debug",
+        "MaxLogSize": "1000K",
+        "MaxLogNumber": 1000
+    },
+    "DB": {
+        "host1": "192.168.254.224",
+        "host2": "192.168.18.81",
+        "host": "10.14.151.123",
+        "port": "5432",
+        "user": "root_mendawai",
+        "password": "Sa212",
+        "name": "db_pbx"
+    },
+    "AMI": {
+        "port": "5038",
+        "host1": "192.168.137.2",
+        "hos2": "192.168.10.120",
+        "host": "10.14.151.121",
+        "username": "admin",
+        "password2": "P@ssw0rd",
+        "password": "icon@2025!",
+        "reconnectDelay": "5000"
+    }
+}
