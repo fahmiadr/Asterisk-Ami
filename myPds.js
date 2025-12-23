@@ -51,7 +51,7 @@ function connectAMI() {
         // Contoh event listener (bisa disesuaikan)
         ami.on('managerevent', async (event) => {         
 
-          logger(`📥 AMI EVENT: ${JSON.stringify(event, null, 2)}`);
+          //logger(`📥 AMI EVENT: ${JSON.stringify(event, null, 2)}`);
           
           // Jika ingin melakukan filter by Event tertentu saja di aktifkan code ini
           //const includeEvents = ['Newchannel', 'Hangup', 'QueueJoin', 'QueueLeave', 'Dial'];
@@ -71,6 +71,7 @@ function connectAMI() {
               const direction = detectDirection(event.channel);
               logger(`📥 AMI EVENT AgentConnect: ${JSON.stringify(event, null, 2)}`);
               await query.insertNewChannel(event, direction);
+              await query.updateAgentsRinging(event);
               break;
             case 'newstate': 
               // Call answered
@@ -85,6 +86,7 @@ function connectAMI() {
               break;
             case 'hangup': 
               await query.updateHangup(event);
+              await query.updateAgentsHangup(event);
               logger(`📥 AMI EVENT AgentConnect: ${JSON.stringify(event, null, 2)}`);
               break;
             case 'agentconnect':
@@ -99,7 +101,21 @@ function connectAMI() {
             case 'mixmonitorstart':
               const thisFile = event.File?.trim();
               logger(`[MixMonitorStart] Filename:${thisFile}`);
-            break;
+              break;
+            case 'agentcalled':
+              await query.updateAgentsRinging(event);
+              logger(`📥 AMI EVENT AgentCalled: ${JSON.stringify(event, null, 2)}`);
+              break;
+            case 'dialend':
+              if (event.dialstatus === 'ANSWER') {
+                await query.updateAgentsConnected(event);
+                logger(`📥 AMI EVENT AgentAnswer: ${JSON.stringify(event, null, 2)}`);
+              }
+              break;
+            case 'bridgeenter':
+              await query.updateAgentsConnected(event);              
+              logger(`📥 AMI EVENT AgentConnect: ${JSON.stringify(event, null, 2)}`);
+              break;
             default:
               break;
           }

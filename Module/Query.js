@@ -400,6 +400,76 @@ async function updateAgentsAUX(event){
   }
 }
 
+async function updateAgentsRinging(event) {
+  try {
+     const agentId = event.calleridnum;
+
+    if (!agentId) return;
+
+    logger(`[AMI.AGENTS.RINGING] QUEUE=${event.queue}, EXT=${agentId}`);
+
+    await pool.query(
+      `UPDATE agents
+       SET
+         status = 'Ringing'
+       WHERE extension = $1`,
+      [
+        agentId
+      ]
+    );
+  } catch (err) {
+    logger(`❌ DB Error (updateAgentsRinging): ${err.message}`);
+  }
+}
+
+async function updateAgentsConnected(event) {
+  try {
+    const agentId =
+      event.membername ||
+      event.connectedlinenum ||
+      (event.channel?.match(/(?:PJSIP|SIP)\/(\d+)/)?.[1]);
+
+    if (!agentId) return;
+
+    logger(`[AMI.AGENTS.CONNECTED] EXT=${agentId}`);
+
+    await pool.query(
+      `UPDATE agents
+       SET
+         status = 'Connected'
+       WHERE extension = $1`,
+      [agentId]
+    );
+  } catch (err) {
+    logger(`❌ DB Error (updateAgentsConnected): ${err.message}`);
+  }
+}
+
+async function updateAgentsHangup(event) {
+  try {
+    const agentId =
+      event.membername ||
+      event.connectedlinenum ||
+      (event.channel?.match(/(?:PJSIP|SIP)\/(\d+)/)?.[1]);
+
+    if (!agentId) return;
+
+    logger(`[AMI.AGENTS.HANGUP] EXT=${agentId}`);
+
+    await pool.query(
+      `UPDATE agents
+       SET
+         status = 'Ready'
+            WHERE extension = $1`,
+      [agentId]
+    );
+  } catch (err) {
+    logger(`❌ DB Error (updateAgentsHangup): ${err.message}`);
+  }
+}
+
+
+
 // Helper
 function detectHangupBy(event) {
   if (!event) return 'system';
@@ -432,5 +502,8 @@ module.exports={
     updateAgentsLogin,
     updateAgentsLogout,
     updateAgentsAUX,
-    updateAgentAbandon
+    updateAgentAbandon,
+    updateAgentsConnected,
+    updateAgentsRinging,
+    updateAgentsHangup
 }
