@@ -492,7 +492,7 @@ function extractCommon(event) {
   return {
     callId: event.linkedid || event.uniqueid,
     uniqueid: event.uniqueid,
-    queueName: event.queuename || null,
+    queueName: event.queue || event.queuename || null,
     agentId:
       event.membername ||
       event.connectedlinenum ||
