@@ -1,0 +1,88 @@
+login : *45 (200/300)
+logout : *45
+
+aux : *46
+
+dial 7777 ke skill
+
+observe = 555 + extension
+whisper = 556 + extension
+
+
+430 796 146 434 4
+4LN2L5bU
+
+
+tlsbindaddr=0.0.0.0:8089
+tlscertfile=/etc/asterisk/keys/asterisk.pem
+tlsprivatekey=
+
+
+
+[2025-11-20T15:50:45.533] [DEBUG] AMI - 📥 AMI EVENT: {
+  "event": "QueueMemberPause",
+  "privilege": "agent,all",
+  "queue": "200",
+  "membername": "1004",
+  "interface": "Local/1004@from-queue/n",
+  "stateinterface": "hint:1004@ext-local",
+  "membership": "dynamic",
+  "penalty": "0",
+  "callstaken": "1",
+  "lastcall": "1763628576",
+  "lastpause": "1763628649",
+  "logintime": "1763628471",
+  "incall": "0",
+  "status": "2",
+  "paused": "1",
+  "pausedreason": "",
+  "ringinuse": "1",
+  "wrapuptime": "0"
+}
+
+
+
+[2025-11-20T15:51:59.464] [DEBUG] AMI - 📥 AMI EVENT: {
+  "event": "QueueMemberPause",
+  "privilege": "agent,all",
+  "queue": "200",
+  "membername": "1004",
+  "interface": "Local/1004@from-queue/n",
+  "stateinterface": "hint:1004@ext-local",
+  "membership": "dynamic",
+  "penalty": "0",
+  "callstaken": "1",
+  "lastcall": "1763628576",
+  "lastpause": "1763628649",
+  "logintime": "1763628471",
+  "incall": "0",
+  "status": "2",
+  "paused": "0",
+  "pausedreason": "",
+  "ringinuse": "1",
+  "wrapuptime": "0"
+}
+
+
+
+[2025-11-20T17:24:01.647] [DEBUG] AMI - 📥 AMI EVENT: {
+  "event": "Newexten",
+  "privilege": "dialplan,all",
+  "channel": "PJSIP/1001-00000069",
+  "channelstate": "6",
+  "channelstatedesc": "Up",
+  "calleridnum": "1001",
+  "calleridname": "1001",
+  "connectedlinenum": "<unknown>",
+  "connectedlinename": "<unknown>",
+  "language": "en",
+  "accountcode": "",
+  "context": "from-internal",
+  "exten": "*491",
+  "priority": "2",
+  "uniqueid": "1763634246.1151",
+  "linkedid": "1763634246.1151",
+  "extension": "*491",
+  "application": "Set",
+  "appdata": "REASON=AUX-Reason-Sholat"
+}
