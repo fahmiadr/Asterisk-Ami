@@ -635,7 +635,10 @@ function extractAgent(event) {
     event.membername ||
     event.Agent ||
     event.agent ||
-    event.Interface?.match(/(?:PJSIP|SIP|Local)\/(\d+)/)?.[1];
+    event.Interface?.match(/(?:PJSIP|SIP|Local)\/(\d+)/)?.[1] ||
+    event.interface?.match(/(?:PJSIP|SIP|Local)\/(\d+)/)?.[1] ||
+    event.Channel?.match(/(?:PJSIP|SIP|Local)\/(\d+)/)?.[1] ||
+    event.channel?.match(/(?:PJSIP|SIP|Local)\/(\d+)/)?.[1] ;
 
   if (!agentId) return null;
 
@@ -747,7 +750,7 @@ async function onStateQueueMemberStatus(event) {
   let myEvent = event.event.toLowerCase();
   let callId = event.uniqueid || null;
 
-  if(myEvent ==='queuememberremoved') state='OFF';
+  if(myEvent === 'queuememberremoved') state='OFF';
   else if(myEvent === 'queuememberadded') state='AVAIL';
   else if(myEvent === 'queuememberpause'){
     if (event.paused === '1') {
@@ -756,6 +759,8 @@ async function onStateQueueMemberStatus(event) {
     } 
     else if (event.paused === '0') state = 'READY';
   }
+  else if(myEvent === 'musiconholdstart') state='HOLD';
+  else if(myEvent === 'musiconholdstop') state='UNHOLD';
 
   if (!state) return;
 

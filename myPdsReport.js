@@ -104,6 +104,8 @@ function connectAMI() {
             case 'queuememberremoved':
             case 'queuememberstatus':
             case 'queuememberpause':
+            case 'musiconholdstart':
+            case 'musiconholdstop':
               logger(`📥 AMI.REPORT.QueueMemberEvent: ${JSON.stringify(event, null, 2)}`);
               await query.onStateQueueMemberStatus(event);
               break;
