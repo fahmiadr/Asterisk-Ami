@@ -88,6 +88,25 @@ function connectAMI() {
                 logger(`📥 AMI.REPORT.Hangup: ${JSON.stringify(event, null, 2)}`);
                 await query.onHangup(event);
                 break;
+            // ===== AGENT STATE EVENTS =====
+            case 'agentlogin':
+            case 'agentlogoff':
+            case 'agentpause':
+            case 'agentunpause':
+            case 'agentcalled':
+            case 'agentconnect':
+            case 'agentcompletecaller':
+            case 'agentcomplete':
+              logger(`📥 AMI.REPORT.AgentEvent: ${JSON.stringify(event, null, 2)}`);
+              await query.onStateAgentEvent(event);
+              break;
+            case 'queuememberadded':
+            case 'queuememberremoved':
+            case 'queuememberstatus':
+            case 'queuememberpause':
+              logger(`📥 AMI.REPORT.QueueMemberEvent: ${JSON.stringify(event, null, 2)}`);
+              await query.onStateQueueMemberStatus(event);
+              break;
             default:
               break;
           }

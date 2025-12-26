@@ -459,7 +459,7 @@ async function updateAgentsHangup(event) {
     await pool.query(
       `UPDATE agents
        SET
-         status = 'Ready'
+         status = 'Avail'
             WHERE extension = $1`,
       [agentId]
     );
@@ -615,6 +615,163 @@ async function onHangup(event) {
   // await updateAgentsHangup(event);
 }
 
+/*
+; Agent State Event 
+*/
+const AGENT_STATE_MAP = {
+  agentlogin:           'AVAIL',
+  agentlogoff:          'OFF',
+  agentpause:           'AUX',
+  agentunpause:         'AVAIL',
+  agentcalled:          'RING',
+  agentconnect:         'ACD',
+  agentcomplete:        'ACW',
+  agentcompletecaller:  'ACW'
+};
+
+function extractAgent(event) {
+  const agentId =
+    event.MemberName ||
+    event.membername ||
+    event.Agent ||
+    event.agent ||
+    event.Interface?.match(/(?:PJSIP|SIP|Local)\/(\d+)/)?.[1];
+
+  if (!agentId) return null;
+
+  return {
+    agentId,
+    eventTime: event.EventTime
+      ? new Date(event.EventTime * 1000)
+      : new Date()
+  };
+}
+
+async function switchAgentState({
+  agentId,
+  newState,
+  eventTime,
+  sourceEvent,
+  rawEvent,
+  reason,
+  queue,
+  callId
+}) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. close previous active state
+    await client.query(
+      `
+      UPDATE agent_state_event
+      SET end_time = $1
+      WHERE agent_id = $2
+        AND end_time IS NULL
+      `,
+      [eventTime, agentId]
+    );
+
+    // 2. insert new state
+    await client.query(
+      `
+      INSERT INTO agent_state_event
+      (
+        agent_id,
+        state,
+        start_time,
+        source_event,
+        raw_event,
+        reason,
+        queue_name,
+        call_id
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `,
+      [
+        agentId,
+        newState,
+        eventTime,
+        sourceEvent,
+        rawEvent,
+        reason,
+        queue,
+        callId
+      ]
+    );
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger(`❌ DB Error (switchAgentState): ${err.message}`);
+  } finally {
+    client.release();
+  }
+}
+
+async function onStateAgentEvent(event) {
+  const data = extractAgent(event);
+  if (!data) return;
+
+  const state = AGENT_STATE_MAP[event.event?.toLowerCase()];
+  if (!state) return;
+
+  let reason = null;
+  if(event.event==='AgentComplete') reason = event.reason;
+  else if(event.event==='AgentCompleteCaller') event.reason;
+
+  let callId=event.uniqueid||null;
+
+  await switchAgentState({
+    agentId: data.agentId,
+    newState: state,
+    eventTime: data.eventTime,
+    sourceEvent: event.event,
+    rawEvent: event,
+    reason: reason,
+    queue: event.queue,
+    callId: callId
+  });
+}
+
+async function onStateQueueMemberStatus(event) {
+  logger(`QueueMemberEvent`)
+  const data = extractAgent(event);
+  if (!data) return;
+
+  logger(`QueueMemberEvent.Found.Agent=${data.agentId}`);
+
+  let state = null;
+  let reason = null;
+  let myEvent = event.event.toLowerCase();
+  let callId = event.uniqueid || null;
+
+  if(myEvent ==='queuememberremoved') state='OFF';
+  else if(myEvent === 'queuememberadded') state='AVAIL';
+  else if(myEvent === 'queuememberpause'){
+    if (event.paused === '1') {
+      state = 'AUX';
+      reason = event.pausedreason;
+    } 
+    else if (event.paused === '0') state = 'READY';
+  }
+
+  if (!state) return;
+
+  await switchAgentState({
+    agentId: data.agentId,
+    newState: state,
+    eventTime: data.eventTime,
+    sourceEvent: event.event,
+    rawEvent: event,
+    reason: reason,
+    queue: event.queue,
+    callId: callId
+  });
+}
+
+
 module.exports={
     /*saveEmail,
     saveAttachment,
@@ -639,5 +796,7 @@ module.exports={
     onHangup,
     onQueueCallerAbandon,
     onQueueCallerJoin,
-    onQueueCallerLeave
+    onQueueCallerLeave,
+    onStateAgentEvent,
+    onStateQueueMemberStatus
 }
