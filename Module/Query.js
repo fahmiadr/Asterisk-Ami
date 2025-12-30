@@ -738,6 +738,55 @@ async function onStateAgentEvent(event) {
   });
 }
 
+async function switchCallHoldState({
+  agentId,
+  callId,
+  newState,
+  eventTime,
+  sourceEvent
+}) {
+  if (!callId) return; // HOLD tanpa call_id = ignore
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    if (true) {
+      // HOLD pertama → end_time NULL
+      await client.query(
+        `
+        INSERT INTO call_hold_event
+        (call_id, agent_id, state, start_time, source_event)
+        VALUES ($1,$2,$5,$3,$4)
+        `,
+        [callId, agentId, eventTime, sourceEvent, newState]
+      );
+    }
+
+    if (newState === 'UNHOLD') {
+      // Tutup HOLD yang masih aktif
+      await client.query(
+        `
+        UPDATE call_hold_event
+        SET end_time = $1
+        WHERE call_id = $2
+          AND end_time IS NULL
+        `,
+        [eventTime, callId]
+      );
+    }
+
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger(`❌ DB Error (switchCallHoldState): ${err.message}`);
+  } finally {
+    client.release();
+  }
+}
+
 async function onStateQueueMemberStatus(event) {
   logger(`QueueMemberEvent`)
   const data = extractAgent(event);
@@ -763,6 +812,18 @@ async function onStateQueueMemberStatus(event) {
   else if(myEvent === 'musiconholdstop') state='UNHOLD';
 
   if (!state) return;
+
+    // ====== HANDLE HOLD / UNHOLD KHUSUS ======
+  if (myEvent === 'musiconholdstart' || myEvent === 'musiconholdstop') {
+    await switchCallHoldState({
+      agentId: data.agentId,
+      callId: callId,
+      newState: state,
+      eventTime: data.eventTime,
+      sourceEvent: event.event
+    });
+    return;
+  }
 
   await switchAgentState({
     agentId: data.agentId,
