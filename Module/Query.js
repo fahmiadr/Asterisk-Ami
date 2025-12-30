@@ -670,7 +670,7 @@ async function switchAgentState({
       `
       UPDATE agent_state_event
       SET end_time = $1
-      WHERE agent_id = $2
+      WHERE extension = $2
         AND end_time IS NULL
       `,
       [eventTime, agentId]
@@ -681,7 +681,7 @@ async function switchAgentState({
       `
       INSERT INTO agent_state_event
       (
-        agent_id,
+        extension,
         state,
         start_time,
         source_event,
@@ -757,7 +757,7 @@ async function switchCallHoldState({
       await client.query(
         `
         INSERT INTO call_hold_event
-        (call_id, agent_id, state, start_time, source_event)
+        (call_id, extension, state, start_time, source_event)
         VALUES ($1,$2,$5,$3,$4)
         `,
         [callId, agentId, eventTime, sourceEvent, newState]
